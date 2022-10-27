@@ -147,7 +147,6 @@ def show_post(post_id):
     requested_post = BlogPost.query.get(post_id)
     with app.app_context():
         comments = Comment.query.filter_by(post_id=post_id).all()
-        print([comment.comment_author.name for comment in comments])
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("You need to login or register to comment.")
