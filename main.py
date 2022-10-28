@@ -9,16 +9,17 @@ from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 from flask_gravatar import Gravatar
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
 ckeditor = CKEditor(app)
 Bootstrap(app)
 gravatar = Gravatar(app, size=100, rating='g', default='retro', force_default=False, force_lower=False, use_ssl=False, base_url=None)
 
 
 # CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///blog.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -29,7 +30,9 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    with app.app_context():
+        user = User.query.get(int(user_id))
+    return user
 
 
 def admin_only(func):
@@ -59,7 +62,7 @@ class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    author = relationship("User", back_populates="posts")
+    author = relationship("User", back_populates="posts", lazy='subquery')
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
@@ -86,7 +89,8 @@ with app.app_context():
 
 @app.route('/')
 def get_all_posts():
-    posts = BlogPost.query.all()
+    with app.app_context():
+        posts = BlogPost.query.all()
     return render_template("index.html", all_posts=posts, logged_in=current_user.is_authenticated)
 
 
@@ -144,14 +148,15 @@ def logout():
 @app.route("/post/<int:post_id>", methods=["GET", "POST"])
 def show_post(post_id):
     form = CommentForm()
-    requested_post = BlogPost.query.get(post_id)
+    # requested_post = BlogPost.query.get(post_id)
     with app.app_context():
+        requested_post = BlogPost.query.get(post_id)
         comments = Comment.query.filter_by(post_id=post_id).all()
-    if form.validate_on_submit():
-        if not current_user.is_authenticated:
-            flash("You need to login or register to comment.")
-            return redirect(url_for("login"))
-        with app.app_context():
+        if form.validate_on_submit():
+            if not current_user.is_authenticated:
+                flash("You need to login or register to comment.")
+                return redirect(url_for("login"))
+            # with app.app_context():
             new_comment = Comment(
                 author_id=current_user.id,
                 post_id=post_id,
@@ -160,8 +165,7 @@ def show_post(post_id):
             db.session.add(new_comment)
             db.session.commit()
             return redirect(url_for("show_post", post_id=post_id))
-
-    return render_template("post.html", post=requested_post, form=form, comments=comments)
+        return render_template("post.html", post=requested_post, form=form, app=app)
 
 
 @app.route("/about")
