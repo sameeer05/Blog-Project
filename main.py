@@ -97,8 +97,8 @@ def get_all_posts():
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
-    if form.validate_on_submit():
-        with app.app_context():
+    with app.app_context():
+        if form.validate_on_submit():
             if User.query.filter_by(email=form.email.data).first():
                 flash("You've already signed up with that email. Login Instead.")
                 return redirect(url_for("login"))
@@ -116,16 +116,16 @@ def register():
             login_user(new_user)
             return redirect(url_for("get_all_posts"))
 
-    return render_template("register.html", form=form, logged_in=current_user.is_authenticated)
+        return render_template("register.html", form=form, logged_in=current_user.is_authenticated)
 
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
-    if form.validate_on_submit():
-        email = request.form.get("email")
-        password = request.form.get("password")
-        with app.app_context():
+    with app.app_context():
+        if form.validate_on_submit():
+            email = request.form.get("email")
+            password = request.form.get("password")
             user = User.query.filter_by(email=email).first()
             if user:
                 if check_password_hash(user.password, password):
@@ -136,7 +136,7 @@ def login():
             flash("This Email does not exist. Please Try again.")
             return redirect(url_for("login"))
 
-    return render_template("login.html", form=form, logged_in=current_user.is_authenticated)
+        return render_template("login.html", form=form, logged_in=current_user.is_authenticated)
 
 
 @app.route('/logout')
@@ -182,8 +182,8 @@ def contact():
 @admin_only
 def add_new_post():
     form = CreatePostForm()
-    if form.validate_on_submit():
-        with app.app_context():
+    with app.app_context():
+        if form.validate_on_submit():
             new_post = BlogPost(
                 title=form.title.data,
                 subtitle=form.subtitle.data,
@@ -195,40 +195,42 @@ def add_new_post():
             )
             db.session.add(new_post)
             db.session.commit()
-        return redirect(url_for("get_all_posts"))
-    return render_template("make-post.html", form=form)
+            return redirect(url_for("get_all_posts"))
+        return render_template("make-post.html", form=form)
 
 
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @admin_only
 def edit_post(post_id):
-    post = BlogPost.query.get(post_id)
-    edit_form = CreatePostForm(
-        title=post.title,
-        subtitle=post.subtitle,
-        img_url=post.img_url,
-        author=post.author,
-        body=post.body
-    )
-    if edit_form.validate_on_submit():
-        post.title = edit_form.title.data
-        post.subtitle = edit_form.subtitle.data
-        post.img_url = edit_form.img_url.data
-        post.author = edit_form.author.data
-        post.body = edit_form.body.data
-        db.session.commit()
-        return redirect(url_for("show_post", post_id=post.id))
+    with app.app_context():
+        post = BlogPost.query.get(post_id)
+        edit_form = CreatePostForm(
+            title=post.title,
+            subtitle=post.subtitle,
+            img_url=post.img_url,
+            author=post.author,
+            body=post.body
+        )
+        if edit_form.validate_on_submit():
+            post.title = edit_form.title.data
+            post.subtitle = edit_form.subtitle.data
+            post.img_url = edit_form.img_url.data
+            post.author = edit_form.author.data
+            post.body = edit_form.body.data
+            db.session.commit()
+            return redirect(url_for("show_post", post_id=post.id))
 
-    return render_template("make-post.html", form=edit_form)
+        return render_template("make-post.html", form=edit_form)
 
 
 @app.route("/delete/<int:post_id>")
 @admin_only
 def delete_post(post_id):
-    post_to_delete = BlogPost.query.get(post_id)
-    db.session.delete(post_to_delete)
-    db.session.commit()
-    return redirect(url_for('get_all_posts'))
+    with app.app_context():
+        post_to_delete = BlogPost.query.get(post_id)
+        db.session.delete(post_to_delete)
+        db.session.commit()
+        return redirect(url_for('get_all_posts'))
 
 
 if __name__ == "__main__":
