@@ -62,7 +62,7 @@ class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    author = relationship("User", back_populates="posts")
+    author = relationship("User", back_populates="posts", lazy='subquery')
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
@@ -115,7 +115,6 @@ def register():
             db.session.commit()
             login_user(new_user)
             return redirect(url_for("get_all_posts"))
-
         return render_template("register.html", form=form, logged_in=current_user.is_authenticated)
 
 
