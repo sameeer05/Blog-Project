@@ -54,8 +54,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
     name = db.Column(db.String(100))
-    posts = relationship("BlogPost", back_populates="author")
-    comments = relationship("Comment", back_populates="comment_author")
+    posts = relationship("BlogPost", back_populates="author", lazy='subquery')
+    comments = relationship("Comment", back_populates="comment_author", lazy='subquery')
 
 
 class BlogPost(db.Model):
@@ -69,17 +69,17 @@ class BlogPost(db.Model):
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
     # ***************Parent Relationship*************#
-    comments = relationship("Comment", back_populates="parent_post")
+    comments = relationship("Comment", back_populates="parent_post", lazy='subquery')
 
 
 class Comment(db.Model):
     __tablename__ = "comments"
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    comment_author = relationship("User", back_populates="comments")
+    comment_author = relationship("User", back_populates="comments", lazy='subquery')
     # ***************Child Relationship*************#
     post_id = db.Column(db.Integer, db.ForeignKey("blog_posts.id"))
-    parent_post = relationship("BlogPost", back_populates="comments")
+    parent_post = relationship("BlogPost", back_populates="comments", lazy='subquery')
     text = db.Column(db.Text, nullable=False)
 
 
